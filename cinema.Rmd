@@ -2,29 +2,8 @@
 library(XML)
 library(RCurl)
 library(rlist)
-```
-
-```{r}
-theurl <- getURL("https://www.boxofficemojo.com/weekend/by-year/2022/?area=IT",.opts = list(ssl.verifypeer = FALSE) )
-tables <- readHTMLTable(theurl)
-tables <- list.clean(tables, fun = is.null, recursive = FALSE)
-n.rows <- unlist(lapply(tables, function(t) dim(t)[1]))
-
-```
-
-```{r}
-tables
-```
-
-```{r}
-install.packages('dplyr')
+# install.packages('dplyr')
 library(dplyr)
-```
-
-```{r}
-new_df <- bind_rows(tables, tables)
-
-new_df <-as.data.frame(new_df)[,1]
 ```
 
 
@@ -35,77 +14,37 @@ for (i in 2004:2022){
   print(url)
   table <- readHTMLTable(getURL(url,.opts = list(ssl.verifypeer = FALSE)))
   table <- list.clean(table, fun = is.null, recursive = FALSE)
-  result <- result[,1]
-  result["Year"] <- i
+  table <- table[[1]]
+  table["Year"] <- i
   result <- bind_rows(result, table)
+
 }
 
 ```
 
 ```{r}
 # 2020
-Week_2020 <- c(c(11:24), c(44:51), "52")
-Overall.Gross_2020 <- rep("0",23)
-Year_2020 <- rep(2020,23)
+Week_2020 <- c(c(11:23), c(44:51), "52")
+Overall.Gross_2020 <- rep("0",22)
+Year_2020 <- rep(2020,22)
 to_add_2020 <- data.frame("Week" = Week_2020,"Overall Gross" = Overall.Gross_2020, "Year" = Year_2020, check.names = FALSE)
 
 #2021
-Week_2021 <- c(c(1:15), "16")
-Overall.Gross_2021 <- rep("0",16)
-Year_2021 <- rep(2021,16)
+Week_2021 <- c(c(1:15), 18, "16")
+Overall.Gross_2021 <- rep("0",17)
+Year_2021 <- rep(2021,17)
 to_add_2021 <- data.frame("Week" = Week_2021,"Overall Gross" = Overall.Gross_2021, "Year" = Year_2021, check.names = FALSE)
 
+result$Week <- (as.character(result$Week))
 
 result <- bind_rows(result, to_add_2020, to_add_2021)
 
-```
-
-```{r}
-# 2020
-url <- "https://www.boxofficemojo.com/weekend/by-year/2020/?area=IT"
-print(url)
-table <- readHTMLTable(getURL(url,.opts = list(ssl.verifypeer = FALSE)))
-table <- list.clean(table, fun = is.null, recursive = FALSE)
-result <- bind_rows(result, table)
-
-Week <- c(c(11:24), c(44:51), "52")
-Overall.Gross <- rep("0",23)
-to_add <- data.frame("Week" = Week,"Overall Gross" = Overall.Gross, check.names = FALSE)
-
-result <- bind_rows(result[,1], to_add)
-
-
-# 2021
-url <- "https://www.boxofficemojo.com/weekend/by-year/2021/?area=IT"
-print(url)
-table <- readHTMLTable(getURL(url,.opts = list(ssl.verifypeer = FALSE)))
-table <- list.clean(table, fun = is.null, recursive = FALSE)
-result <- bind_rows(result, table)
-
-Week <- c(c(1:15), "16")
-Overall.Gross <- rep("0",16)
-to_add <- data.frame("Week" = Week,"Overall Gross" = Overall.Gross, check.names = FALSE)
-result <- bind_rows(result[,1], to_add)
-
-# 2022
-url <- "https://www.boxofficemojo.com/weekend/by-year/2022/?area=IT"
-print(url)
-table <- readHTMLTable(getURL(url,.opts = list(ssl.verifypeer = FALSE)))
-table <- list.clean(table, fun = is.null, recursive = FALSE)
-result <- bind_rows(result, table)
-result[,1]
-
-```
-
-
-```{r}
-result <- result[,1]
-View(result)
+result$Week <- as.numeric(as.character(result$Week))
 
 ```
 
 ```{r}
-
+write.csv(result,"Result.csv")
 ```
 
 
