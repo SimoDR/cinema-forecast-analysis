@@ -1,0 +1,48 @@
+```{r}
+library(XML)
+library(RCurl)
+library(rlist)
+# install.packages('dplyr')
+library(dplyr)
+library(rvest)
+
+```
+
+
+```{r}
+result <- data.frame()
+for (i in 2004:2022){
+  url <- paste("https://www.boxofficemojo.com/weekend/by-year/",i,"/?area=IT",sep="")
+  print(url)
+  table <- readHTMLTable(getURL(url,.opts = list(ssl.verifypeer = FALSE)))
+  table <- list.clean(table, fun = is.null, recursive = FALSE)
+  table <- table[[1]]
+  table["Year"] <- i
+  result <- bind_rows(result, table)
+
+}
+
+write.csv(result,"italy_data.csv")
+
+```
+
+
+
+
+```{r}
+result <- data.frame()
+for (i in 2004:2022){
+  link <- paste("https://www.boxofficemojo.com/weekend/by-year/",i,sep="")
+  print(link)
+  skip_to_next <<- FALSE
+  qi_webpage <- read_html(link)
+  qi_table <- html_nodes(qi_webpage, 'table')
+  qi <- html_table(qi_table, header = TRUE)
+  qi <- qi[[1]]
+  qi <- qi[,-1]
+  qi["Year"] <- i
+  result <- bind_rows(result, qi)
+}
+write.csv(result,"usa_data.csv")
+``` 
+

@@ -1,51 +1,80 @@
 ```{r}
 library(XML)
-library(RCurl)
-library(rlist)
 # install.packages('dplyr')
 library(dplyr)
+library(ggplot2)
+library(readr)
 ```
+# Italy
 
+## Italy data
 
 ```{r}
-result <- data.frame()
-for (i in 2004:2022){
-  url <- paste("https://www.boxofficemojo.com/weekend/by-year/",i,"/?area=IT",sep="")
-  print(url)
-  table <- readHTMLTable(getURL(url,.opts = list(ssl.verifypeer = FALSE)))
-  table <- list.clean(table, fun = is.null, recursive = FALSE)
-  table <- table[[1]]
-  table["Year"] <- i
-  result <- bind_rows(result, table)
-
-}
-
+it_cinema <- read.csv("italy_data.csv")
+it_cinema
 ```
 
 ```{r}
-# 2020
-Week_2020 <- c(c(11:23), c(44:51), "52")
-Overall.Gross_2020 <- rep("0",22)
-Year_2020 <- rep(2020,22)
-to_add_2020 <- data.frame("Week" = Week_2020,"Overall Gross" = Overall.Gross_2020, "Year" = Year_2020, check.names = FALSE)
+it_cinema$Week <- as.numeric(as.character(it_cinema$Week))
+it_cinema$Week <- as.numeric(as.character(it_cinema$Week))
+it_cinema$Date <- with(it_cinema, as.Date(paste0(it_cinema$Year, "-01-01"), format="%Y-%m-%d", origin="1970-01-01") +
+                                               as.difftime(it_cinema$Week, unit="weeks"))
+it_cinema$Overall.Gross <- parse_number(it_cinema$Overall.Gross)
+```
 
-#2021
-Week_2021 <- c(c(1:15), 18, "16")
-Overall.Gross_2021 <- rep("0",17)
-Year_2021 <- rep(2021,17)
-to_add_2021 <- data.frame("Week" = Week_2021,"Overall Gross" = Overall.Gross_2021, "Year" = Year_2021, check.names = FALSE)
 
-result$Week <- (as.character(result$Week))
+```{r,fig.width = 8,dpi=600}
+ggplot( data = it_cinema, aes( Date, Overall.Gross )) + geom_line() 
+```
 
-result <- bind_rows(result, to_add_2020, to_add_2021)
+# Italian productions in italy
 
-result$Week <- as.numeric(as.character(result$Week))
-
+```{r}
+ita_prods <- read.csv("italy_prods.csv")
+ita_prods
 ```
 
 ```{r}
-write.csv(result,"Result.csv")
+ita_prods$Date <- with(ita_prods, as.Date(paste0(ita_prods$Year, "-01-01"), format="%Y-%m-%d", origin="1970-01-01") +
+                                               as.difftime(ita_prods$Week, unit="weeks"))
+```
+
+```{r,fig.width = 8,dpi=600}
+ggplot( data = ita_prods, aes( Date, IT_movies )) + geom_line() 
+```
+
+# US
+
+## US data
+```{r}
+us_cinema <- read.csv("us_data.csv")
+us_cinema
+```
+
+```{r}
+us_cinema$Week <- as.numeric(as.character(us_cinema$Week))
+us_cinema$Week <- as.numeric(as.character(us_cinema$Week))
+us_cinema$Date <- with(us_cinema, as.Date(paste0(us_cinema$Year, "-01-01"), format="%Y-%m-%d", origin="1970-01-01") +
+                                               as.difftime(us_cinema$Week, unit="weeks"))
+us_cinema$Overall.Gross <- parse_number(us_cinema$Overall.Gross)
 ```
 
 
+```{r,fig.width = 8,dpi=600}
+ggplot( data = us_cinema, aes( Date, Overall.Gross )) + geom_line() 
+```
+## Italian productions in US
 
+```{r}
+us_prods <- read.csv("italy_prods.csv")
+us_prods
+```
+
+```{r}
+us_prods$Date <- with(us_prods, as.Date(paste0(us_prods$Year, "-01-01"), format="%Y-%m-%d", origin="1970-01-01") +
+                                               as.difftime(us_prods$Week, unit="weeks"))
+```
+
+```{r,fig.width = 8,dpi=600}
+ggplot( data = us_prods, aes( Date, IT_movies )) + geom_line() 
+```

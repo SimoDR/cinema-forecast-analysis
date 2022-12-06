@@ -1,0 +1,134 @@
+```{r}
+library(XML)
+library(RCurl)
+library(rvest)
+library(rlist)
+# install.packages('dplyr')
+library(dplyr)
+library(httr)
+library(stringr)
+
+```
+
+```{r, warning=FALSE}
+italy_table <- data.frame(matrix(ncol = 3, nrow = 0))
+colnames(italy_table) <- c("Week","Year","IT_movies")
+for (i in 2004:2022){
+  for (j in c(1:52)) {
+    link <- paste("https://www.boxofficemojo.com/weekend/",i,"W",j,"/?area=IT&ref_=bo_wey_table_1",sep="")
+    print(link)
+    skip_to_next <<- FALSE
+    possibleError <- tryCatch( qi_webpage <- read_html(link), error=function(e) { skip_to_next <<- TRUE} )
+    prod_countries <- c()
+    if(skip_to_next) { 
+      italian_prod <- sum(str_count(prod_countries, "Italy"))
+      italy_table[nrow(italy_table) + 1,] <- c(j, i, 0)
+      next 
+      }     
+      qi_table <- html_nodes(qi_webpage, 'table')
+      qi <- html_table(qi_table, header = TRUE)
+      if(length(qi) == 0) {
+        italian_prod <- sum(str_count(prod_countries, "Italy"))
+        italy_table[nrow(italy_table) + 1,] <- c(j, i, 0)
+        next 
+      }
+      qi <- qi[[1]]
+      qi <- qi[,-1]
+      first_air <- which(qi$Weeks == 1)
+      first_air <- c()
+      index <- 0
+      for (f in seq_along(qi)) {
+         # print(qi[i,"Weeks"])
+        if(qi[f,"Weeks"] == 1  && !is.na(qi[f,"Weeks"]) && !is.na(qi[f,"Distributor"]) && qi[f,"Distributor"] != "-" && qi[f,"Distributor"] != "N/A") {
+          index <- index + 1
+          first_air <- c(first_air,index)
+        }
+      }
+      # print(first_air)
+      qi_get <- GET(link)
+      qi_html <- htmlParse(content(qi_get, as="text"))
+      qi.urls <- xpathSApply(qi_html, "//*/td/a[@target='_blank']", xmlAttrs, "href")
+      # print(qi.urls)
+      for (k in first_air){
+        # print(qi.urls[,i]['href'])
+
+        distr_url <- qi.urls[,k]['href']
+        distr_code <- str_extract(distr_url, "co\\d{7}")
+        webpage = getURL(paste("https://www.imdb.com/find?s=co&q=",distr_code,"&ref_=nv_sr_sm",sep=""))
+        webpage <- readLines(tc <- textConnection(webpage)); close(tc)
+        pagetree <- htmlTreeParse(webpage, useInternalNodes = TRUE, encoding='UTF-8')
+          
+        prod_country <- xpathSApply(pagetree, "//*/li/label[@class='ipc-metadata-list-summary-item__li']", xmlValue)
+        prod_countries <- c(prod_countries,prod_country[1])
+        
+      }
+      italian_prod <- sum(str_count(prod_countries, "Italy"))
+      italy_table[nrow(italy_table) + 1,] <- c(j, i, italian_prod)
+  
+  }
+  write.csv(italy_table,"italy_prods.csv")
+}
+
+```
+
+
+```{r, warning=FALSE}
+italy_table <- data.frame(matrix(ncol = 3, nrow = 0))
+colnames(italy_table) <- c("Week","Year","IT_movies")
+for (i in 2004:2022){
+  for (j in c(1:52)) {
+    link <- paste("https://www.boxofficemojo.com/weekend/",i,"W",j,"/?ref_=bo_wey_table_1",sep="")
+    print(link)
+    skip_to_next <<- FALSE
+    possibleError <- tryCatch( qi_webpage <- read_html(link), error=function(e) { skip_to_next <<- TRUE} )
+    prod_countries <- c()
+    if(skip_to_next) { 
+      italian_prod <- sum(str_count(prod_countries, "Italy"))
+      italy_table[nrow(italy_table) + 1,] <- c(j, i, 0)
+      next 
+      }     
+      qi_table <- html_nodes(qi_webpage, 'table')
+      qi <- html_table(qi_table, header = TRUE)
+      if(length(qi) == 0) {
+        italian_prod <- sum(str_count(prod_countries, "Italy"))
+        italy_table[nrow(italy_table) + 1,] <- c(j, i, 0)
+        next 
+      }
+      qi <- qi[[1]]
+      qi <- qi[,-1]
+      first_air <- which(qi$Weeks == 1)
+      first_air <- c()
+      index <- 0
+      for (f in seq_along(qi)) {
+         # print(qi[i,"Weeks"])
+        if(qi[f,"Weeks"] == 1  && !is.na(qi[f,"Weeks"]) && !is.na(qi[f,"Distributor"]) && qi[f,"Distributor"] != "-" && qi[f,"Distributor"] != "N/A") {
+          index <- index + 1
+          first_air <- c(first_air,index)
+        }
+      }
+      # print(first_air)
+      qi_get <- GET(link)
+      qi_html <- htmlParse(content(qi_get, as="text"))
+      qi.urls <- xpathSApply(qi_html, "//*/td/a[@target='_blank']", xmlAttrs, "href")
+      # print(qi.urls)
+      for (k in first_air){
+        # print(qi.urls[,i]['href'])
+
+        distr_url <- qi.urls[,k]['href']
+        distr_code <- str_extract(distr_url, "co\\d{7}")
+        webpage = getURL(paste("https://www.imdb.com/find?s=co&q=",distr_code,"&ref_=nv_sr_sm",sep=""))
+        webpage <- readLines(tc <- textConnection(webpage)); close(tc)
+        pagetree <- htmlTreeParse(webpage, useInternalNodes = TRUE, encoding='UTF-8')
+          
+        prod_country <- xpathSApply(pagetree, "//*/li/label[@class='ipc-metadata-list-summary-item__li']", xmlValue)
+        prod_countries <- c(prod_countries,prod_country[1])
+        
+      }
+      italian_prod <- sum(str_count(prod_countries, "Italy"))
+      italy_table[nrow(italy_table) + 1,] <- c(j, i, italian_prod)
+  
+  }
+  write.csv(italy_table,"us_prods.csv")
+}
+
+```
