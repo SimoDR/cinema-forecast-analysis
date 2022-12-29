@@ -248,7 +248,26 @@ ggplot( ) +
 
 ```
 
-### Post-covid?
+### Competition
+
+
+```{r}
+it_cinema_monthly$Montly.access = it_cinema_monthly$Montly.gross/7
+```
+
+```{r}
+ggplot( ) +
+  geom_line(data = it_cinema_monthly, aes( month, Montly.access), color="red") + 
+  geom_line(data = it_netflix, aes( date, n_access ), color="blue")
+
+```
+
+```{r}
+ucrcdNR<- UCRCD(it_cinema_monthly$Montly.access,it_netflix$n_access, display=T)
+summary(ucrcdNR)
+
+```
+### Covid
 
 ```{r}
 it_cinema = it_cinema[which(it_cinema$Date > "2020-03-11"),]
@@ -265,19 +284,48 @@ ggplot( data = it_cinema_monthly, aes( month, Montly.gross )) + geom_line()
 ```
 
 ```{r}
-it_cinema_monthly$Montly.access = it_cinema_monthly$Montly.gross/3
-```
+bm_GC<-BM(it_cinema$Overall.Gross,display = T,
+          prelimestimates = c(sum(it_cinema$Overall.Gross) + 100, 0.001, 0.01),)
+summary(bm_GC)
 
-```{r}
+dates <- it_cinema$Date
+pred_bmGC<- predict(bm_GC, newx=c(1:length(dates)))
+pred.instGC<- make.instantaneous(pred_bmGC)
+pred_bm <- data.frame(cbind(dates,pred.instGC))
+pred_bm$dates <- dates
+pred_bm$pred.instGC <- pred.instGC
 ggplot( ) +
-  geom_line(data = it_cinema_monthly, aes( month, Montly.access), color="red") + 
-  geom_line(data = it_netflix, aes( date, n_access ), color="blue")
+  geom_line(data = it_cinema, aes( Date, Overall.Gross), color="red") +
+  geom_line(data = pred_bm, aes( dates, pred.instGC), color="blue")
+
 
 ```
 
+
 ```{r}
-ucrcdNR<- UCRCD(it_cinema_monthly$Montly.access,it_netflix$n_access, display=T)
-summary(ucrcdNR)
+bm_GC<-GBM(it_cinema$Overall.Gross,display = T,
+          shock="rett", nshock = 2,
+          prelimestimates = c(sum(it_cinema$Overall.Gross) + 100, 0.01, 0.01,
+          0, 15, -0.8,
+          15, 40, +1),
+          # shock="rett", nshock = 3,
+          # prelimestimates = c(sum(it_cinema$Overall.Gross) + 100, 0.01, 0.01,
+          #                     1, 15, -1,
+          #                     10, 30, +0.5,
+          #                     30, 50, -0.5)
+)
+summary(bm_GC)
+
+dates <- it_cinema$Date
+pred_bmGC<- predict(bm_GC, newx=c(1:length(dates)))
+pred.instGC<- make.instantaneous(pred_bmGC)
+pred_bm <- data.frame(cbind(dates,pred.instGC))
+pred_bm$dates <- dates
+pred_bm$pred.instGC <- pred.instGC
+ggplot( ) +
+  geom_line(data = it_cinema, aes( Date, Overall.Gross), color="red") +
+  geom_line(data = pred_bm, aes( dates, pred.instGC), color="blue")
+
 
 ```
 
