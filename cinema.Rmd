@@ -37,13 +37,14 @@ ggplot( data = it_cinema, aes( Date, Overall.Gross )) + geom_line()
 
 ```
 
+
 ## Pre-covid 
 
 
 ```{r}
-it_cinema_full = it_cinema
-it_cinema = it_cinema[which(it_cinema$Date < "2020-03-01"),]
-ggplot( data = it_cinema, aes( Date, Overall.Gross )) + geom_line() 
+# it_cinema_full = it_cinema
+it_cinema_precovid = it_cinema[which(it_cinema$Date < "2020-03-01"),]
+ggplot( data = it_cinema_precovid, aes( Date, Overall.Gross )) + geom_line() 
 
 ```
 ### Some EDA
@@ -51,7 +52,7 @@ ggplot( data = it_cinema, aes( Date, Overall.Gross )) + geom_line()
 Let's see what happens in 2010 and 2011
 
 ```{r fig.width=7}
-ggplot( data = it_cinema[which(it_cinema$Year == 2010 | it_cinema$Year == 2011),], aes( Date, Overall.Gross )) + 
+ggplot( data = it_cinema_precovid[which(it_cinema_precovid$Year == 2010 | it_cinema_precovid$Year == 2011),], aes( Date, Overall.Gross )) + 
   geom_line() + 
   scale_x_date(date_breaks = "1 month", date_labels = "%b")
 
@@ -59,7 +60,7 @@ ggplot( data = it_cinema[which(it_cinema$Year == 2010 | it_cinema$Year == 2011),
 
 
 ```{r}
-ggplot( data = it_cinema[which(it_cinema$Date >= "2010-12-12" & it_cinema$Date <= "2011-01-15"),], aes( Date, Overall.Gross )) + 
+ggplot( data = it_cinema_precovid[which(it_cinema_precovid$Date >= "2010-12-12" & it_cinema_precovid$Date <= "2011-01-15"),], aes( Date, Overall.Gross )) + 
   geom_line() + 
   scale_x_date(date_breaks = "1 day", date_labels = "%d")
 
@@ -68,7 +69,7 @@ ggplot( data = it_cinema[which(it_cinema$Date >= "2010-12-12" & it_cinema$Date <
 ### Comulated distribution of gross per week
 
 ```{r}
-it_cinema_week <-it_cinema %>% 
+it_cinema_week <-it_cinema_precovid %>% 
     group_by(Week) %>%
     summarize(Weekly.mean.gross = mean(Overall.Gross))
 
@@ -82,17 +83,17 @@ ggplot(it_cinema_week, aes(x=Week, y=Weekly.mean.gross)) + geom_bar(stat="identi
 Cumulated gross for periods (christmas, autumn, summer) to see how they trend over the years
  
 ```{r}
-christmas <- it_cinema[which(it_cinema$Week >= 48 | it_cinema$Week <= 5),]
+christmas <- it_cinema_precovid[which(it_cinema_precovid$Week >= 48 | it_cinema_precovid$Week <= 5),]
 christmas <- christmas %>%
     group_by(Year) %>%
     summarize(Overall.Gross = sum(Overall.Gross))
 
-autumn <- it_cinema[which(it_cinema$Week >= 39 & it_cinema$Week <= 48),]
+autumn <- it_cinema_precovid[which(it_cinema_precovid$Week >= 39 & it_cinema_precovid$Week <= 48),]
 autumn <- autumn %>%
     group_by(Year) %>%
     summarize(Overall.Gross = sum(Overall.Gross))
 
-summer <- it_cinema[which(it_cinema$Week >= 23 & it_cinema$Week <= 38),]
+summer <- it_cinema_precovid[which(it_cinema_precovid$Week >= 23 & it_cinema_precovid$Week <= 38),]
 summer <- summer %>%
     group_by(Year) %>%
     summarize(Overall.Gross = sum(Overall.Gross))
@@ -119,22 +120,22 @@ plot_grid(christmas_plot, autumn_plot, summer_plot, labels = c("christmas","autu
 ### Bass model
 
 ```{r}
-bm_GC<-BM(it_cinema$Overall.Gross,display = T,
-          prelimestimates = c(sum(it_cinema$Overall.Gross) + 100, 0.001, 0.1),)
+bm_GC<-BM(it_cinema_precovid$Overall.Gross,display = T,
+          prelimestimates = c(sum(it_cinema_precovid$Overall.Gross) + 100, 0.001, 0.1),)
 summary(bm_GC)
 
 ```
 
 
 ```{r}
-dates <- c(it_cinema$Date,seq(as.Date("2020-03-01"), as.Date("2023-03-01"), "week"))
+dates <- c(it_cinema_precovid$Date,seq(as.Date("2020-03-01"), as.Date("2023-03-01"), "week"))
 pred_bmGC<- predict(bm_GC, newx=c(1:length(dates)))
 pred.instGC<- make.instantaneous(pred_bmGC)
 pred_bm <- data.frame(cbind(dates,pred.instGC))
 pred_bm$dates <- dates
 pred_bm$pred.instGC <- pred.instGC
 ggplot( ) +
-  geom_line(data = it_cinema, aes( Date, Overall.Gross), color="red") +
+  geom_line(data = it_cinema_precovid, aes( Date, Overall.Gross), color="red") +
   geom_line(data = pred_bm, aes( dates, pred.instGC), color="blue")
 
 ```
@@ -142,9 +143,7 @@ ggplot( ) +
 
 ## Full time series (with covid)
 
-```{r}
-it_cinema <- it_cinema_full
-```
+
 
 ```{r}
 it_cinema_monthly <-it_cinema %>% 
@@ -210,6 +209,40 @@ ggplot( ) +
 ```
 
 
+### Arima
+
+```{r}
+cinema_diff <- diff(it_cinema$Overall.Gross,lag=1)
+ggtsdisplay(cinema_diff)
+```
+
+
+```{r,fig.width=20}
+auto.arima<- auto.arima(it_cinema$Overall.Gross)
+ggplot( ) +
+  geom_line(data = it_cinema, aes( Date, Overall.Gross)) +
+  geom_line(data = it_cinema, aes(Date, fitted(auto.arima)), color="red")
+
+auto.arima
+```
+
+
+```{r, fig.width=20}
+a2<- Arima(it_cinema$Overall.Gross, order=c(4,1,2), seasonal = c(1,0,0))
+ggplot( ) +
+  geom_line(data = it_cinema, aes( Date, Overall.Gross)) +
+  geom_line(data = it_cinema, aes(Date, fitted(a2)), color="red")
+a2
+```
+```{r}
+auto.arima<- auto.arima(it_cinema_postcovid$Overall.Gross)
+ggplot( ) +
+  geom_line(data = it_cinema_postcovid, aes( Date, Overall.Gross)) +
+  geom_line(data = it_cinema_postcovid, aes(Date, fitted(auto.arima)), color="red")
+
+auto.arima
+```
+
 
 
 
@@ -237,19 +270,6 @@ ggplot( ) +
 
 ## Netflix competition
 
-```{r}
-it_cinema_monthly$Montly.access = it_cinema_monthly$Montly.gross/7
-```
-
-```{r}
-ggplot( ) +
-  geom_line(data = it_cinema_monthly, aes( month, Montly.access), color="red") + 
-  geom_line(data = it_netflix, aes( date, n_access ), color="blue")
-
-```
-
-### Competition
-
 
 ```{r}
 it_cinema_monthly$Montly.access = it_cinema_monthly$Montly.gross/7
@@ -267,15 +287,15 @@ ucrcdNR<- UCRCD(it_cinema_monthly$Montly.access,it_netflix$n_access, display=T)
 summary(ucrcdNR)
 
 ```
-### Covid
+## Covid
 
 ```{r}
-it_cinema = it_cinema[which(it_cinema$Date > "2020-03-11"),]
+it_cinema_postcovid = it_cinema[which(it_cinema$Date > "2020-03-11"),]
 ```
 
 
 ```{r}
-it_cinema_monthly <-it_cinema %>% 
+it_cinema_monthly <-it_cinema_postcovid %>% 
     group_by(month = lubridate::floor_date(Date, "month")) %>%
     summarize(Montly.gross = sum(Overall.Gross))
 
@@ -284,18 +304,18 @@ ggplot( data = it_cinema_monthly, aes( month, Montly.gross )) + geom_line()
 ```
 
 ```{r}
-bm_GC<-BM(it_cinema$Overall.Gross,display = T,
-          prelimestimates = c(sum(it_cinema$Overall.Gross) + 100, 0.001, 0.01),)
+bm_GC<-BM(it_cinema_postcovid$Overall.Gross,display = T,
+          prelimestimates = c(sum(it_cinema_postcovid$Overall.Gross) + 100, 0.001, 0.01),)
 summary(bm_GC)
 
-dates <- it_cinema$Date
+dates <- it_cinema_postcovid$Date
 pred_bmGC<- predict(bm_GC, newx=c(1:length(dates)))
 pred.instGC<- make.instantaneous(pred_bmGC)
 pred_bm <- data.frame(cbind(dates,pred.instGC))
 pred_bm$dates <- dates
 pred_bm$pred.instGC <- pred.instGC
 ggplot( ) +
-  geom_line(data = it_cinema, aes( Date, Overall.Gross), color="red") +
+  geom_line(data = it_cinema_postcovid, aes( Date, Overall.Gross), color="red") +
   geom_line(data = pred_bm, aes( dates, pred.instGC), color="blue")
 
 
@@ -303,29 +323,80 @@ ggplot( ) +
 
 
 ```{r}
-bm_GC<-GBM(it_cinema$Overall.Gross,display = T,
+bm_GC<-GBM(it_cinema_postcovid$Overall.Gross, display = T,
           shock="rett", nshock = 2,
-          prelimestimates = c(sum(it_cinema$Overall.Gross) + 100, 0.01, 0.01,
+          prelimestimates = c(sum(it_cinema_postcovid$Overall.Gross) + 100, 0.01, 0.01,
           0, 15, -0.8,
-          15, 40, +1),
+          15, 30, +1),
           # shock="rett", nshock = 3,
           # prelimestimates = c(sum(it_cinema$Overall.Gross) + 100, 0.01, 0.01,
           #                     1, 15, -1,
-          #                     10, 30, +0.5,
-          #                     30, 50, -0.5)
+          #                     10, 20, +0.5,
+          #                     20, 31, -0.5)
+
+
 )
 summary(bm_GC)
 
-dates <- it_cinema$Date
+dates <- it_cinema_postcovid$Date
 pred_bmGC<- predict(bm_GC, newx=c(1:length(dates)))
 pred.instGC<- make.instantaneous(pred_bmGC)
 pred_bm <- data.frame(cbind(dates,pred.instGC))
 pred_bm$dates <- dates
 pred_bm$pred.instGC <- pred.instGC
 ggplot( ) +
-  geom_line(data = it_cinema, aes( Date, Overall.Gross), color="red") +
+  geom_line(data = it_cinema_postcovid, aes( Date, Overall.Gross), color="red") +
   geom_line(data = pred_bm, aes( dates, pred.instGC), color="blue")
 
+
+```
+
+## Prediction
+
+
+```{r}
+netflix_access <- c(rep(0,96),it_netflix$n_access)
+```
+
+```{r}
+prods_monthly <-prods %>% 
+    group_by(month = lubridate::floor_date(Date, "month")) %>%
+    summarize(IT_movies = sum(IT_movies),foreign_movies = sum(foreign_movies) )
+
+ggplot( ) + 
+  geom_line(data = prods_monthly, aes( month, IT_movies )) +
+  geom_line(data = prods_monthly, aes( month, foreign_movies ),color="red") 
+
+```
+```{r}
+prods_monthly$perc <- prods_monthly$IT_movies/prods_monthly$foreign_movies
+# prods_monthly <- na.omit(prods_monthly)
+prods_monthly <- do.call(data.frame,lapply(prods_monthly, function(x) replace(x, is.infinite(x),NA)))
+prods_monthly[is.na(prods_monthly)] <- 1
+prods_monthly
+```
+
+
+
+```{r}
+cinema_data <- merge(x = it_cinema_monthly, y = prods_monthly, by = "month", all = TRUE)
+cinema_data$netflix_access <- netflix_access
+cinema_data <- na.omit(cinema_data)
+cinema_data
+```
+
+
+
+```{r}
+fit3 <- lm(cinema_data$Montly.gross ~ cinema_data$perc + cinema_data$netflix_access)
+summary(fit3)
+
+resfit1<- residuals(fit3)
+plot(resfit1,xlab="Time", ylab="residuals" )
+
+ggplot( ) +
+  geom_line(data = cinema_data, aes( month, Montly.gross)) +
+  geom_line(data = cinema_data, aes(month, fitted(fit3)), color="red")
 
 ```
 
