@@ -8,6 +8,9 @@ library(forecast)
 library(readxl)
 library(DIMORA)
 library(cowplot)
+library(gbm)
+library(tree)
+
 
 ```
 
@@ -226,14 +229,24 @@ ggplot( ) +
 auto.arima
 ```
 
-
-```{r, fig.width=20}
-a2<- Arima(it_cinema$Overall.Gross, order=c(4,1,2), seasonal = c(1,0,0))
-ggplot( ) +
-  geom_line(data = it_cinema, aes( Date, Overall.Gross)) +
-  geom_line(data = it_cinema, aes(Date, fitted(a2)), color="red")
-a2
+```{r}
+library(zoom)
 ```
+
+```{r}
+a2<- auto.arima(it_cinema_precovid$Overall.Gross,  seasonal = c(3,3,3))
+windows()
+ggplot( ) +
+  geom_line(data = it_cinema_precovid, aes( Date, Overall.Gross)) +
+  geom_line(data = it_cinema_precovid, aes(Date, fitted(a2)), color="red")
+a2
+windows()
+res2<- residuals(a2)
+ggtsdisplay(res2)
+```
+
+
+
 ```{r}
 auto.arima<- auto.arima(it_cinema_postcovid$Overall.Gross)
 ggplot( ) +
@@ -259,10 +272,10 @@ prods
 ```
 Italian productions in black, foreign in red
 
-```{r}
+```{r fig.width=11}
 ggplot( ) + 
   geom_line(data = prods, aes( Date, IT_movies )) +
-  geom_line(data = prods, aes( Date, foreign_movies ),color="red") 
+  geom_line(data = prods, aes( Date, foreign_movies ),color="red") + 
   geom_line(data = it_cinema, aes( Date, Overall.Gross/1000000),color="blue" )
 
 ```
@@ -351,7 +364,7 @@ ggplot( ) +
 
 ```
 
-## Prediction
+## Multivariates 
 
 
 ```{r}
@@ -378,6 +391,7 @@ prods_monthly
 
 
 
+
 ```{r}
 cinema_data <- merge(x = it_cinema_monthly, y = prods_monthly, by = "month", all = TRUE)
 cinema_data$netflix_access <- netflix_access
@@ -385,6 +399,14 @@ cinema_data <- na.omit(cinema_data)
 cinema_data
 ```
 
+```{r}
+ggplot( ) + 
+  geom_line(data = cinema_data, aes( month, Montly.gross/40000000 )) +
+  geom_line(data = cinema_data, aes( month, perc ),color="red") +
+  geom_line(data = cinema_data, aes( month, netflix_access/6000000 ), color="blue")
+
+
+```
 
 
 ```{r}
@@ -399,4 +421,34 @@ ggplot( ) +
   geom_line(data = cinema_data, aes(month, fitted(fit3)), color="red")
 
 ```
+```{r}
+fit4 <- gbm(cinema_data$Montly.gross ~ cinema_data$perc + cinema_data$netflix_access,bag.fraction = 0.9,train.fraction = 0.9,n.trees=500)
+summary(fit4)
+
+Yhat <- predict(fit4, n.trees=500, newdata = data.frame(cinema_data$perc,  cinema_data$netflix_access))
+
+ggplot( ) +
+  geom_line(data = cinema_data, aes( month, Montly.gross)) +
+  geom_line(data = cinema_data, aes(month, Yhat), color="red")
+
+```
+```{r}
+
+armax1<- Arima(cinema_data$Montly.gross, xreg=cbind(cinema_data$perc,cinema_data$netflix_access),order=c(0,1,0))
+res1<- residuals(armax1)
+Acf(res1)
+
+ggplot( ) +
+  geom_line(data = cinema_data, aes( month, Montly.gross)) +
+  geom_line(data = cinema_data, aes(month, fitted(armax1)), color="red")
+
+armax1
+```
+
+```{r}
+cinema.es <- ses(cinema_data$Montly.gross, alpha = .2, h = 100)
+plot(cinema.es)
+```
+
+
 
