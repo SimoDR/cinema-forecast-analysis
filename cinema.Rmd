@@ -238,6 +238,7 @@ summer <- summer %>%
 
 christmas_plot <- ggplot( ) + 
   geom_line(data = christmas, aes( Year, Overall.Gross ), color="blue") +
+  geom_point(data = christmas, aes( Year, Overall.Gross ), color="blue") +
   scale_x_continuous(breaks = round(seq(min(autumn$Year), max(autumn$Year), by = 2),1)) +
   scale_y_continuous(labels=function(x)x/1000000) +
   ylab("Income (millions $)")
@@ -245,12 +246,14 @@ christmas_plot <- ggplot( ) +
 
 autumn_plot <- ggplot( ) + 
   geom_line(data = autumn, aes( Year, Overall.Gross ), color="green") +
+  geom_point(data = autumn, aes( Year, Overall.Gross ), color="green") +
   scale_x_continuous(breaks = round(seq(min(autumn$Year), max(autumn$Year), by = 2),1))+
   scale_y_continuous(labels=function(x)x/1000000)+
   ylab("Income (millions $)")
 
 summer_plot <- ggplot( ) + 
   geom_line(data = summer, aes( Year, Overall.Gross ), color="red") +
+  geom_point(data = summer, aes( Year, Overall.Gross ), color="red") +
   scale_x_continuous(breaks = round(seq(min(autumn$Year), max(autumn$Year), by = 2),1))+
   scale_y_continuous(labels=function(x)x/1000000)+
   ylab("Income (millions $)")
@@ -428,9 +431,14 @@ Italian productions in black, foreign in red
 
 ## Netflix competition
 
+```{r}
+it_netflix <- read.csv("italy_netflix.csv",sep=";")
+it_netflix$date <- as.Date(it_netflix$date, format="%d/%m/%Y")
+```
 
 ```{r}
 it_cinema_monthly$Montly.access = it_cinema_monthly$Montly.gross/7
+it_cinema_monthly
 ```
 
 ```{r,fig.width = 7}
@@ -458,7 +466,35 @@ ucrcdNR<- UCRCD(it_cinema_monthly$Montly.access,it_netflix$n_access, display=T)
 summary(ucrcdNR)
 
 ```
-da fare grafico bello
+```{r}
+
+```
+
+```{r}
+dates <- c(it_cinema_precovid$Date,seq(as.Date("2020-03-01"), as.Date("2023-03-01"), "month"))
+
+predUCRCD_cinema <- make.instantaneous(ucrcdNR$fitted[[1]])
+predUCRCD_netflix <- make.instantaneous(ucrcdNR$fitted[[2]])
+ggplot( ) +
+  geom_line(data = it_cinema_monthly, aes( month, Montly.access, color="Cinema observ"),linetype="dashed") +
+  geom_point(data = it_cinema_monthly, aes( month, Montly.access, color="Cinema observ"),size=1) +
+  geom_line(data = it_cinema_monthly, aes( month, predUCRCD_cinema, color="Cinema BM")) +
+  geom_line(data = it_netflix, aes(date, n_access , color="Netflix observ"), linetype="dashed") +
+  geom_point(data = it_netflix, aes(date, n_access , color="Netflix observ"), linetype="dashed",size=1) +
+  geom_line(data = it_netflix, aes(date, predUCRCD_netflix , color="Netflix BM")) +
+  ylab("Number of access") +
+  xlab("Date") +
+  scale_y_continuous(labels=function(x)x/1000000) + 
+  scale_x_date(date_breaks = "2 years", date_labels = "%Y") +
+  scale_color_manual(name  ="Legend",
+                     values=c("Cinema observ" = "red",
+                              "Cinema BM" = "red",
+                              "Netflix observ" = "blue",
+                              "Netflix BM" = "blue"))+
+  ggtitle("Bass Model with competition between cinema and Netflix accesses")
+
+```
+
 
 ## Covid
 
@@ -644,7 +680,8 @@ ggtsdisplay(cinema_diff)
 ```
 
 ```{r}
-arima<- Arima(it_cinema_postcovid$Overall.Gross,order=c(1,1,1))
+arima<- Arima(it_cinema_postcovid$Overall.Gross,
+              order=c(2,1,1),seasonal = list(order=c(0,1,1),period=12))
 ggplot( ) +
   geom_line(data = it_cinema_postcovid, aes( Date, Overall.Gross, color="Values")) +
   geom_point(data = it_cinema_postcovid, aes( Date, Overall.Gross, color="Values"),size=1.2)+
@@ -687,7 +724,7 @@ checkresiduals(arima)
 ```
 
 
-## Multivariates 
+## Multiple predictors 
 
 
 ```{r}
@@ -740,7 +777,13 @@ ggplot( ) +
 
 
 ```
+### Linear Regression
+```{r}
+future <- seq(as.Date("2022-12-03"), as.Date("2023-07-01"), by = "month")
+length(future)
+future_pred <- data.frame(future,future)
 
+```
 
 ```{r}
 fit3 <- lm(cinema_data$Montly.gross ~ cinema_data$perc + cinema_data$netflix_access)
@@ -749,43 +792,93 @@ summary(fit3)
 resfit1<- residuals(fit3)
 plot(resfit1,xlab="Time", ylab="residuals" )
 
+
+# 
+# ggplot( ) +
+#   geom_line(data = cinema_data, aes( Date, Overall.Gross)) +
+#   geom_point(data = cinema_data, aes( Date, Overall.Gross),size=1.2)+
+#   geom_line(data = cinema_data, aes(Date, fitted(fit2), color="Prediction")) +
+#   geom_point(data = it_cinema_postcovid, aes(Date, fitted(fit2), color="Prediction"),size=1.2)+
+#   geom_smooth(data = future_pred, aes(x=future, y=mean, ymax=up, ymin=low, color="Prediction"),stat='identity',size=0) +
+#   geom_point(data = future_pred, aes(x=future, y=mean, color="Prediction"),size=1.2)+
+#   ylab("Income (millions $)") + 
+#   scale_y_continuous(labels=function(x)x/1000000) +
+#   scale_x_date(date_breaks = "6 months", date_labels = "%b %Y") +
+#   scale_color_manual(name  ="Legend",
+#                      values=c("Values" = "black",
+#                               "Prediction" = "red",
+#                               "Prediction" = "red")) +
+#   ggtitle("Forecasting with Linear Regression model")
+
+
 ggplot( ) +
-  geom_line(data = cinema_data, aes( month, Montly.gross)) +
-  geom_line(data = cinema_data, aes(month, fitted(fit3)), color="red")
+  geom_line(data = cinema_data, aes( month, Montly.gross, color="Observed")) +
+  geom_point(data = cinema_data, aes( month, Montly.gross),size=1) +
+  geom_line(data = cinema_data, aes(month, fitted(fit3), color="Prediction")) +
+  geom_point(data = cinema_data, aes(month, fitted(fit3), color="Prediction"),size=1) +
+  ylab("Accesses (millions)") + 
+  xlab("Date") +
+  scale_y_continuous(labels=function(x)x/1000000) +
+  scale_x_date(date_breaks = "2 years", date_labels = "%Y") +
+  scale_color_manual(name  ="Legend",
+                     values=c("Observed" = "black",
+                              "Prediction" = "red",
+                              "Prediction" = "red")) +
+  ggtitle("Forecasting with Linear Regression model")
+
 
 ```
+### GBM
+
 ```{r}
-fit4 <- gbm(cinema_data$Montly.gross ~ cinema_data$perc + cinema_data$netflix_access,train.fraction = 0.9,n.trees=500)
+fit4 <- gbm(cinema_data$Montly.gross ~ cinema_data$perc + cinema_data$netflix_access,train.fraction = 0.99,n.trees=500)
 summary(fit4)
 
 Yhat <- predict(fit4, n.trees=500, newdata = data.frame(cinema_data$perc,  cinema_data$netflix_access))
-
 ggplot( ) +
-  geom_line(data = cinema_data, aes( month, Montly.gross)) +
-  geom_line(data = cinema_data, aes(month, Yhat), color="red")
+  geom_line(data = cinema_data, aes( month, Montly.gross, color="Observed")) +
+  geom_point(data = cinema_data, aes( month, Montly.gross),size=1) +
+  geom_line(data = cinema_data, aes(month, Yhat, color="Prediction")) +
+  geom_point(data = cinema_data, aes(month, Yhat, color="Prediction"),size=1) +
+  ylab("Accesses (millions)") + 
+  xlab("Date") +
+  scale_y_continuous(labels=function(x)x/1000000) +
+  scale_x_date(date_breaks = "2 years", date_labels = "%Y") +
+  scale_color_manual(name  ="Legend",
+                     values=c("Observed" = "black",
+                              "Prediction" = "red",
+                              "Prediction" = "red")) +
+  ggtitle("Forecasting with Gradient Boosting")
+
 
 ```
+
+### Arima
 ```{r}
 
-armax1<- Arima(cinema_data$Montly.gross, xreg=cbind(cinema_data$perc,cinema_data$netflix_access),seasonal=list(order=c(0,1,0), period =12))
+armax1<- Arima(cinema_data$Montly.gross, xreg=cbind(cinema_data$perc,cinema_data$netflix_access),
+               order=c(2,1,1), seasonal=list(order=c(0,1,1), period =12))
 res1<- residuals(armax1)
-Acf(res1)
 
+Yhat <- predict(fit4, n.trees=500, newdata = data.frame(cinema_data$perc,  cinema_data$netflix_access))
 ggplot( ) +
-  geom_line(data = cinema_data, aes( month, Montly.gross)) +
-  geom_line(data = cinema_data, aes(month, fitted(armax1)), color="red")
+  geom_line(data = cinema_data, aes( month, Montly.gross, color="Observed")) +
+  geom_point(data = cinema_data, aes( month, Montly.gross),size=1) +
+  geom_line(data = cinema_data, aes(month, fitted(armax1), color="Prediction")) +
+  geom_point(data = cinema_data, aes(month, fitted(armax1), color="Prediction"),size=1) +
+  ylab("Accesses (millions)") + 
+  xlab("Date") +
+  scale_y_continuous(labels=function(x)x/1000000) +
+  scale_x_date(date_breaks = "2 years", date_labels = "%Y") +
+  scale_color_manual(name  ="Legend",
+                     values=c("Observed" = "black",
+                              "Prediction" = "red",
+                              "Prediction" = "red")) +
+  ggtitle("Forecasting with ARIMA")
 
 checkresiduals(cinema_diff)
 
 ```
-```{r}
-```
 
-```{r}
-cinema.es <- ses(cinema_data$Montly.gross, alpha = .2, h = 100)
-plot(cinema.es)
-```
-Forcasting: prendere serie precovid e fare forcasting, veder come sarebbe andata
-  prendere postcovid e fare forcasting lì
 
 
