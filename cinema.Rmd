@@ -72,11 +72,11 @@ it_cinema_monthly <-it_cinema %>%
 
 ```{r}
 acf(it_cinema_monthly$Montly.gross , lag.max = 50)
+pacf(it_cinema_monthly$Montly.gross , lag.max = 50)
+
 ```
 
-```{r}
-pacf(it_cinema_monthly$Montly.gross , lag.max = 50)
-```
+
 ### Linear regression
 
 ```{r}
@@ -466,9 +466,7 @@ ucrcdNR<- UCRCD(it_cinema_monthly$Montly.access,it_netflix$n_access, display=T)
 summary(ucrcdNR)
 
 ```
-```{r}
 
-```
 
 ```{r}
 dates <- c(it_cinema_precovid$Date,seq(as.Date("2020-03-01"), as.Date("2023-03-01"), "month"))
@@ -732,6 +730,13 @@ netflix_access <- c(rep(0,96),it_netflix$n_access)
 ```
 
 ```{r}
+it_cinema_monthly <-it_cinema %>% 
+    group_by(month = lubridate::floor_date(Date, "month")) %>%
+    summarize(Montly.gross = sum(Overall.Gross))
+
+```
+
+```{r}
 prods_monthly <-prods %>% 
     group_by(month = lubridate::floor_date(Date, "month")) %>%
     summarize(IT_movies = sum(IT_movies),foreign_movies = sum(foreign_movies) )
@@ -742,7 +747,9 @@ prods_monthly <-prods %>%
 
 ggplot( ) + 
   geom_line(data = prods_monthly, aes( month, IT_movies ,color="Italian movies")) +
+  geom_point(data = prods_monthly, aes( month, IT_movies ,color="Italian movies")) +
   geom_line(data = prods_monthly, aes( month, foreign_movies,color="Foreign movies")) +
+  geom_point(data = prods_monthly, aes( month, foreign_movies,color="Foreign movies")) +
   ylab("Number of movies aired") +
   xlab("Date") +
   scale_x_date(date_breaks = "2 years", date_labels = "%Y") +
@@ -770,10 +777,10 @@ cinema_data
 ```
 
 ```{r}
-ggplot( ) + 
-  geom_line(data = cinema_data, aes( month, Montly.gross/40000000 )) +
-  geom_line(data = cinema_data, aes( month, perc ),color="red") +
-  geom_line(data = cinema_data, aes( month, netflix_access/6000000 ), color="blue")
+# ggplot( ) + 
+#   geom_line(data = cinema_data, aes( month, Montly.gross/40000000 )) +
+#   geom_line(data = cinema_data, aes( month, perc ),color="red") +
+#   geom_line(data = cinema_data, aes( month, netflix_access/6000000 ), color="blue")
 
 
 ```
